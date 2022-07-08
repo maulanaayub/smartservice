@@ -1841,7 +1841,7 @@ class Smartmhs extends REST_Controller_Smartmobile
             $devicename = BniEnc::decrypt_string($devicename_post, $this->cid_app(), $this->cis_app()); //$devicename_post;
             $kodeinstruksi = BniEnc::decrypt_string($this->post("resyncrondevice"), $this->cid_app(), $this->cis_app()); //$this->post("resyncrondevice");
 
-            if ($username != null || $password != null || $iddevice != null || $devicename != null || $kodeinstruksi != null) {
+            if ($username != null && $password != null && $iddevice != null && $devicename != null && $kodeinstruksi != null) {
                 $cek_auth_login = $this->Api_model->check_user_mhs($username, $password);
 
                 if ($cek_auth_login != null) {
@@ -2148,7 +2148,7 @@ class Smartmhs extends REST_Controller_Smartmobile
             $username = BniEnc::decrypt_string($username_post, $this->cid_app(), $this->cis_app());
             $iddevice = BniEnc::decrypt_string($iddevice_post, $this->cid_app(), $this->cis_app());
 
-            if ($username != null || $iddevice != null) {
+            if ($username != null && $iddevice != null) {
 
                 $cek_perangkat = $this->Api_model->cek_perangkat_mhs($username, $iddevice);
                 if ($cek_perangkat == 3) { //jika kode 3 user refresh session dengan perangkat yang sama dengan data di trdevicemhs
@@ -2376,83 +2376,95 @@ class Smartmhs extends REST_Controller_Smartmobile
 
     public function create_otp_verif_email_post()
     {
-        $unim = $this->post('unim');
-        $email = $this->post('uemail');
-        $kode_pst = $this->post('kode_pst');
+        $encunim = $this->post('unim');
+        $encemail = $this->post('uemail');
+        $enckode_pst = $this->post('kode_pst');
 
         $this->form_validation->set_rules('kode_pst', 'Kode Program Studi', 'required');
         $this->form_validation->set_rules('unim', 'Nim', 'required');
-        $this->form_validation->set_rules('uemail', 'Email', 'required|valid_email|callback_email_check');
+        $this->form_validation->set_rules('uemail', 'Email', 'required|callback_email_check');
         $this->form_validation->set_message('required', '%s tidak valid');
         $this->form_validation->set_message('valid_email', 'format %s tidak valid');
         $this->form_validation->set_message('is_unique', '%s sudah digunakan pada akun lain');
         $this->form_validation->set_error_delimiters('', '');
 
         if ($this->form_validation->run() == true) {
-            $data_mhs = $this->Api_model->cek_nim_siakad($unim);
 
-            if ($data_mhs != null) {
+            $unim = BniEnc::decrypt_string($encunim, $this->cid_app(), $this->cis_app());
+            $email = BniEnc::decrypt_string($encemail, $this->cid_app(), $this->cis_app());
+            $kode_pst = BniEnc::decrypt_string($enckode_pst, $this->cid_app(), $this->cis_app());
 
-                $cek_limit_per_hari = $this->Api_model->cek_limit_verif_email($unim);
-                $limit = 5;
 
-                if ($cek_limit_per_hari >= $limit) {
-                    $success = false;
-                    $message = "Permintaan Kode OTP penautan email gagal, Percobaan telah melampaui batas maksimal dalam satu hari yaitu $limit kali.";
-                    $countdown = 0;
-                } else {
+            if ($unim != null && $email != null && $kode_pst != null) {
+                $data_mhs = $this->Api_model->cek_nim_siakad($unim);
 
-                    $cek_waktu_periksa_otp = $this->Api_model->cek_waktu_periksa_otp($unim);
+                if ($data_mhs != null) {
 
-                    if ($cek_waktu_periksa_otp > 0) {
+                    $cek_limit_per_hari = $this->Api_model->cek_limit_verif_email($unim);
+                    $limit = 5;
+
+                    if ($cek_limit_per_hari >= $limit) {
                         $success = false;
-                        $message = "Permintaan Kode OTP penautan email gagal, Mohon tunggu untuk percobaan berikutnya.";
-                        $countdown = $cek_waktu_periksa_otp;
+                        $message = "Permintaan Kode OTP penautan email gagal, Percobaan telah melampaui batas maksimal dalam satu hari yaitu $limit kali.";
+                        $countdown = 0;
                     } else {
 
-                        $otp = mt_rand(1001, 9999);
+                        $cek_waktu_periksa_otp = $this->Api_model->cek_waktu_periksa_otp($unim);
+
+                        if ($cek_waktu_periksa_otp > 0) {
+                            $success = false;
+                            $message = "Permintaan Kode OTP penautan email gagal, Mohon tunggu untuk percobaan berikutnya.";
+                            $countdown = $cek_waktu_periksa_otp;
+                        } else {
+
+                            $otp = mt_rand(1001, 9999);
 
 
-                        $waktu_tunggu = 120; //2 menit
-                        $kadaluarsa_dalam_menit = $waktu_tunggu / 60;
-                        $data_insert = array("NIMHS" => $unim, "EMAILMHS" => $email, "OTP" => $otp, "OTPVALIDUTIL" => time() + $waktu_tunggu, "TANGGALINPUT" => date("Y-m-d H:i:s"));
-                        $data_update = array("EMAIL" => $email);
-                        $update_insert_id = $this->Api_model->change_email_mhs($unim, $kode_pst, $data_update, $data_insert);
+                            $waktu_tunggu = 120; //2 menit
+                            $kadaluarsa_dalam_menit = $waktu_tunggu / 60;
+                            $data_insert = array("NIMHS" => $unim, "EMAILMHS" => $email, "OTP" => $otp, "OTPVALIDUTIL" => time() + $waktu_tunggu, "TANGGALINPUT" => date("Y-m-d H:i:s"));
+                            $data_update = array("EMAIL" => $email);
+                            $update_insert_id = $this->Api_model->change_email_mhs($unim, $kode_pst, $data_update, $data_insert);
 
-                        if ($update_insert_id != 0) {
-                            $text_email = "Pakai kode OTP <b> $otp </b> untuk menautkan email dengan akun siakad kamu, Kode otp ini berlaku $kadaluarsa_dalam_menit menit. <br><br> Jangan pernah memberikan kode OTP ini ke pihak siapapun termasuk yang mengaku dari IAIN Salatiga";
-                            $subject = "IAIN Salatiga : Kode OTP penautan akun siakad";
+                            if ($update_insert_id != 0) {
+                                $text_email = "Pakai kode OTP <b> $otp </b> untuk menautkan email dengan akun siakad kamu, Kode otp ini berlaku $kadaluarsa_dalam_menit menit. <br><br> Jangan pernah memberikan kode OTP ini ke pihak siapapun termasuk yang mengaku dari IAIN Salatiga";
+                                $subject = "IAIN Salatiga : Kode OTP penautan akun siakad";
 
-                            // $success = true;
-                            // $message = "Email berhasil disimpan, verifikasi email dengan kode otp yang sudah dikirimkan ke email untuk menautkan akun";
-                            // $countdown = $waktu_tunggu;
-
-
-                            //$this->send_email($email, $text_email, $subject);
+                                // $success = true;
+                                // $message = "Email berhasil disimpan, verifikasi email dengan kode otp yang sudah dikirimkan ke email untuk menautkan akun";
+                                // $countdown = $waktu_tunggu;
 
 
-                            $kirim_otp = $this->send_email($email, $text_email, $subject);
+                                //$this->send_email($email, $text_email, $subject);
 
-                            if ($kirim_otp) {
-                                $success = true;
-                                $message = "Email berhasil disimpan, verifikasi email dengan kode otp yang sudah dikirimkan ke email untuk menautkan akun";
-                                $countdown = $waktu_tunggu;
+
+                                $kirim_otp = $this->send_email($email, $text_email, $subject);
+
+                                if ($kirim_otp) {
+                                    $success = true;
+                                    $message = "Email berhasil disimpan, verifikasi email dengan kode otp yang sudah dikirimkan ke email untuk menautkan akun";
+                                    $countdown = $waktu_tunggu;
+                                } else {
+                                    $delete_otp = $this->Api_model->delete_otp($unim, $update_insert_id);
+                                    $success = false;
+                                    $message = "Email gagal ditautkan, terjadi kendala pada server SMTP";
+                                    $countdown = 0;
+                                }
                             } else {
-                                $delete_otp = $this->Api_model->delete_otp($unim, $update_insert_id);
                                 $success = false;
-                                $message = "Email gagal ditautkan, terjadi kendala pada server SMTP";
+                                $message = "Email gagal ditautkan, terjadi kendala pada sistem database.";
                                 $countdown = 0;
                             }
-                        } else {
-                            $success = false;
-                            $message = "Email gagal ditautkan, terjadi kendala pada sistem database.";
-                            $countdown = 0;
                         }
                     }
+                } else {
+                    $success = false;
+                    $message = "Nim mahasiswa tidak ditemukan";
+                    $countdown = 0;
                 }
             } else {
                 $success = false;
-                $message = "Nim mahasiswa tidak ditemukan";
+                $message = "Cie mau ngehack";
                 $countdown = 0;
             }
         } else {
@@ -2475,48 +2487,58 @@ class Smartmhs extends REST_Controller_Smartmobile
 
     public function verif_email_mhs_post()
     {
-        $unim = $this->post('unim');
-        $email = $this->post('uemail');
-        $kode_pst = $this->post('kode_pst');
-        $otp_post = $this->post('otp');
+        $encunim = $this->post('unim');
+        $encemail = $this->post('uemail');
+        $enckode_pst = $this->post('kode_pst');
+        $encotp_post = $this->post('otp');
 
         $this->form_validation->set_rules('kode_pst', 'Kode Program Studi', 'required');
         $this->form_validation->set_rules('unim', 'Nim', 'required');
         $this->form_validation->set_rules('otp', 'Kode OTP', 'required');
-        $this->form_validation->set_rules('uemail', 'Email', 'required|valid_email');
+        $this->form_validation->set_rules('uemail', 'Email', 'required');
         $this->form_validation->set_message('required', '%s tidak valid');
         $this->form_validation->set_message('valid_email', 'format %s tidak valid');
         $this->form_validation->set_error_delimiters('', '');
 
         if ($this->form_validation->run() == true) {
-            $data_mhs = $this->Api_model->cek_nim_siakad($unim);
+            $unim = BniEnc::decrypt_string($encunim, $this->cid_app(), $this->cis_app());
+            $email = BniEnc::decrypt_string($encemail, $this->cid_app(), $this->cis_app());
+            $kode_pst = BniEnc::decrypt_string($enckode_pst, $this->cid_app(), $this->cis_app());
+            $otp_post = BniEnc::decrypt_string($encotp_post, $this->cid_app(), $this->cis_app());
 
-            if ($data_mhs != null) {
-                $cek_otp = $this->Api_model->cek_otp_email($unim, $email, $otp_post);
+            if ($unim != null && $email != null && $kode_pst != null && $otp_post != null) {
+                $data_mhs = $this->Api_model->cek_nim_siakad($unim);
 
-                if ($cek_otp == 1) {
+                if ($data_mhs != null) {
+                    $cek_otp = $this->Api_model->cek_otp_email($unim, $email, $otp_post);
 
-                    $data_update_tremailverif = array("ISVERIFIED" => 1);
+                    if ($cek_otp == 1) {
 
-                    $update_trverifemail = $this->Api_model->update_email_verified($unim, $email, $otp_post, $data_update_tremailverif);
+                        $data_update_tremailverif = array("ISVERIFIED" => 1);
 
-                    if ($update_trverifemail) {
-                        $success = true;
-                        $message = "Selamat Email berhasil ditautkan dengan akun SIAKAD.";
+                        $update_trverifemail = $this->Api_model->update_email_verified($unim, $email, $otp_post, $data_update_tremailverif);
+
+                        if ($update_trverifemail) {
+                            $success = true;
+                            $message = "Selamat Email berhasil ditautkan dengan akun SIAKAD.";
+                        } else {
+                            $success = false;
+                            $message = "Email gagal ditautkan, terjadi kendala pada sistem database.";
+                        }
+                    } else if ($cek_otp == 2) {
+                        $success = false;
+                        $message = "Kode OTP kadaluarsa";
                     } else {
                         $success = false;
-                        $message = "Email gagal ditautkan, terjadi kendala pada sistem database.";
+                        $message = "Kode OTP tidak sesuai";
                     }
-                } else if ($cek_otp == 2) {
-                    $success = false;
-                    $message = "Kode OTP kadaluarsa";
                 } else {
                     $success = false;
-                    $message = "Kode OTP tidak sesuai";
+                    $message = "Nim mahasiswa tidak ditemukan.";
                 }
             } else {
                 $success = false;
-                $message = "Nim mahasiswa tidak ditemukan.";
+                $message = "Cie mau ngehack";
             }
         } else {
             $unim_err = form_error('unim') ? form_error('unim') . ' ' : null;
@@ -2537,85 +2559,93 @@ class Smartmhs extends REST_Controller_Smartmobile
 
     public function create_otp_reset_password_post()
     {
-        $unim = $this->post('unim');
-        $email = $this->post('uemail');
+        $nimpost = $this->post('unim');
+        $emailpost = $this->post('uemail');
 
         $this->form_validation->set_rules('unim', 'Nim', 'required');
-        $this->form_validation->set_rules('uemail', 'Email', 'required|valid_email');
+        $this->form_validation->set_rules('uemail', 'Email', 'required');
         $this->form_validation->set_message('required', '%s tidak valid');
         $this->form_validation->set_message('valid_email', 'format %s tidak valid');
 
         $this->form_validation->set_error_delimiters('', '');
 
         if ($this->form_validation->run() == true) {
-            $data_mhs = $this->Api_model->cek_nim_email_siakad($unim, $email);
+            $unim = BniEnc::decrypt_string($nimpost, $this->cid_app(), $this->cis_app());
+            $email = BniEnc::decrypt_string($emailpost, $this->cid_app(), $this->cis_app());
+            if ($unim != null && $email != null) {
+                $data_mhs = $this->Api_model->cek_nim_email_siakad($unim, $email);
 
-            if ($data_mhs == 1) {
+                if ($data_mhs == 1) {
 
 
-                $cek_limit_per_hari = $this->Api_model->cek_limit_reset_password($unim);
-                $limit = 5;
+                    $cek_limit_per_hari = $this->Api_model->cek_limit_reset_password($unim);
+                    $limit = 5;
 
-                if ($cek_limit_per_hari >= $limit) {
-                    $success = false;
-                    $message = "Permintaan Kode OTP reset password gagal, Percobaan telah melampaui batas maksimal dalam satu hari yaitu $limit kali.";
-                    $countdown = 0;
-                } else {
-
-                    $cek_waktu_periksa_otp = $this->Api_model->cek_waktu_periksa_otp_reset_password($unim);
-
-                    if ($cek_waktu_periksa_otp > 0) {
+                    if ($cek_limit_per_hari >= $limit) {
                         $success = false;
-                        $message = "Permintaan Kode OTP reset password gagal, Mohon tunggu untuk percobaan berikutnya.";
-                        $countdown = $cek_waktu_periksa_otp;
+                        $message = "Permintaan Kode OTP reset password gagal, Percobaan telah melampaui batas maksimal dalam satu hari yaitu $limit kali.";
+                        $countdown = 0;
                     } else {
 
-                        $otp = mt_rand(1001, 9999);
+                        $cek_waktu_periksa_otp = $this->Api_model->cek_waktu_periksa_otp_reset_password($unim);
 
-                        $waktu_tunggu = 120; //2 menit
-                        $kadaluarsa_dalam_menit = $waktu_tunggu / 60;
-                        $old_pass_mhs = $this->Api_model->get_old_pass_mhs($unim, $email);
+                        if ($cek_waktu_periksa_otp > 0) {
+                            $success = false;
+                            $message = "Permintaan Kode OTP reset password gagal, Mohon tunggu untuk percobaan berikutnya.";
+                            $countdown = $cek_waktu_periksa_otp;
+                        } else {
 
-                        $data_insert = array("NIMHS" => $unim, "EMAILMHS" => $email, "OTP" => $otp, "OTPVALIDUTIL" => time() + $waktu_tunggu, "OLDPASS" => $old_pass_mhs["login_pass"], "TANGGALINPUT" => date("Y-m-d H:i:s"));
+                            $otp = mt_rand(1001, 9999);
 
-                        $insert_otp = $this->Api_model->create_otp_reset_password_mhs($data_insert);
+                            $waktu_tunggu = 120; //2 menit
+                            $kadaluarsa_dalam_menit = $waktu_tunggu / 60;
+                            $old_pass_mhs = $this->Api_model->get_old_pass_mhs($unim, $email);
 
-                        if ($insert_otp != 0) {
-                            $text_email = "Pakai kode OTP <b> $otp </b> untuk mengganti password akun siakad kamu, Kode otp ini berlaku $kadaluarsa_dalam_menit menit. <br><br> Jangan pernah memberikan kode OTP ini ke pihak siapapun termasuk yang mengaku dari IAIN Salatiga";
-                            $subject = "IAIN Salatiga : Kode OTP reset password akun siakad";
+                            $data_insert = array("NIMHS" => $unim, "EMAILMHS" => $email, "OTP" => $otp, "OTPVALIDUTIL" => time() + $waktu_tunggu, "OLDPASS" => $old_pass_mhs["login_pass"], "TANGGALINPUT" => date("Y-m-d H:i:s"));
+
+                            $insert_otp = $this->Api_model->create_otp_reset_password_mhs($data_insert);
+
+                            if ($insert_otp != 0) {
+                                $text_email = "Pakai kode OTP <b> $otp </b> untuk mengganti password akun siakad kamu, Kode otp ini berlaku $kadaluarsa_dalam_menit menit. <br><br> Jangan pernah memberikan kode OTP ini ke pihak siapapun termasuk yang mengaku dari IAIN Salatiga";
+                                $subject = "IAIN Salatiga : Kode OTP reset password akun siakad";
 
 
 
-                            $kirim_otp = $this->send_email($email, $text_email, $subject);
+                                $kirim_otp = $this->send_email($email, $text_email, $subject);
 
-                            if ($kirim_otp) {
-                                $success = true;
-                                $message = "Kode OTP reset password berhasil dikirim";
-                                $countdown = $waktu_tunggu;
+                                if ($kirim_otp) {
+                                    $success = true;
+                                    $message = "Kode OTP reset password berhasil dikirim";
+                                    $countdown = $waktu_tunggu;
+                                } else {
+                                    $delete_otp = $this->Api_model->delete_otp_reset_password($unim, $insert_otp);
+                                    $success = false;
+                                    $message = "Kode OTP reset password gagal dikirim, terjadi kendala pada server SMTP";
+                                    $countdown = 0;
+                                }
                             } else {
-                                $delete_otp = $this->Api_model->delete_otp_reset_password($unim, $insert_otp);
                                 $success = false;
-                                $message = "Kode OTP reset password gagal dikirim, terjadi kendala pada server SMTP";
+                                $message = "Kode OTP reset password gagal dikirim, terjadi kendala pada sistem database.";
                                 $countdown = 0;
                             }
-                        } else {
-                            $success = false;
-                            $message = "Kode OTP reset password gagal dikirim, terjadi kendala pada sistem database.";
-                            $countdown = 0;
                         }
                     }
+                } else if ($data_mhs == 2) {
+                    $success = false;
+                    $message = "Tidak dapat melakukan reset password, email yang kamu masukan belum pernah dilakukan verifikasi.";
+                    $countdown = 0;
+                } else if ($data_mhs == 3) {
+                    $success = false;
+                    $message = "Tidak dapat melakukan reset password, email yang kamu masukan belum tertaut pada akun manapun.";
+                    $countdown = 0;
+                } else {
+                    $success = false;
+                    $message = "Nim atau email mahasiswa tidak ditemukan";
+                    $countdown = 0;
                 }
-            } else if ($data_mhs == 2) {
-                $success = false;
-                $message = "Tidak dapat melakukan reset password, email yang kamu masukan belum pernah dilakukan verifikasi.";
-                $countdown = 0;
-            } else if ($data_mhs == 3) {
-                $success = false;
-                $message = "Tidak dapat melakukan reset password, email yang kamu masukan belum tertaut pada akun manapun.";
-                $countdown = 0;
             } else {
                 $success = false;
-                $message = "Nim atau email mahasiswa tidak ditemukan";
+                $message = "Ciee mau ngehack";
                 $countdown = 0;
             }
         } else {
@@ -2640,18 +2670,22 @@ class Smartmhs extends REST_Controller_Smartmobile
 
     public function verif_otp_reset_password_mhs_post()
     {
-        $unim = $this->post('unim');
-        $email = $this->post('uemail');
-        $otp_post = $this->post('otp');
+        $nimpost = $this->post('unim');
+        $emailpost = $this->post('uemail');
+        $otppost = $this->post('otp');
 
         $this->form_validation->set_rules('unim', 'Nim', 'required');
         $this->form_validation->set_rules('otp', 'Kode OTP', 'required');
-        $this->form_validation->set_rules('uemail', 'Email', 'required|valid_email');
+        $this->form_validation->set_rules('uemail', 'Email', 'required');
         $this->form_validation->set_message('required', '%s tidak valid');
-        $this->form_validation->set_message('valid_email', 'format %s tidak valid');
+        //$this->form_validation->set_message('valid_email', 'format %s tidak valid');
         $this->form_validation->set_error_delimiters('', '');
 
         if ($this->form_validation->run() == true) {
+            $unim = BniEnc::decrypt_string($nimpost, $this->cid_app(), $this->cis_app());
+            $email = BniEnc::decrypt_string($emailpost, $this->cid_app(), $this->cis_app());
+            $otp_post = BniEnc::decrypt_string($otppost, $this->cid_app(), $this->cis_app());
+
             $data_mhs = $this->Api_model->cek_nim_siakad($unim);
 
             if ($data_mhs != null) {
@@ -2708,14 +2742,14 @@ class Smartmhs extends REST_Controller_Smartmobile
     public function change_password_mhs_post()
     {
         $encnim = $this->post('encnim');
-        $email = $this->post('uemail');
-        $otp_post = $this->post('otp');
+        $encemail = $this->post('uemail');
+        $encotp = $this->post('otp');
         $encpassword = $this->post('encnewpassword');
 
         $this->form_validation->set_rules('encnim', 'Enkripsi Nim', 'required');
         $this->form_validation->set_rules('encnewpassword', 'Enkripsi Password Baru', 'required');
         $this->form_validation->set_rules('otp', 'Kode OTP', 'required');
-        $this->form_validation->set_rules('uemail', 'Email', 'required|valid_email');
+        $this->form_validation->set_rules('uemail', 'Email', 'required');
         $this->form_validation->set_message('required', '%s tidak valid');
         $this->form_validation->set_message('valid_email', 'format %s tidak valid');
         $this->form_validation->set_error_delimiters('', '');
@@ -2723,11 +2757,13 @@ class Smartmhs extends REST_Controller_Smartmobile
         if ($this->form_validation->run() == true) {
             $decrypt_encnim = BniEnc::decrypt_string($encnim, $this->cid_reset_pas(), $this->cis_reset_pas());
             $decrypt_newpass = BniEnc::decrypt_string($encpassword, $this->cid_app(), $this->cis_app()); //"ayubgantengt";
+            $decrypt_otp = BniEnc::decrypt_string($encotp, $this->cid_app(), $this->cis_app());
+            $decrypt_email = BniEnc::decrypt_string($encemail, $this->cid_app(), $this->cis_app());
 
-            if ($decrypt_encnim != null && $decrypt_newpass != null) {
+            if ($decrypt_encnim != null && $decrypt_newpass != null && $decrypt_otp != null && $decrypt_email != null) {
                 $data_mhs = $this->Api_model->cek_nim_siakad($decrypt_encnim);
                 if ($data_mhs != null) {
-                    $cek_otp_to_change = $this->Api_model->cek_otp_when_try_to_change_password($decrypt_encnim, $email, $otp_post, 1);
+                    $cek_otp_to_change = $this->Api_model->cek_otp_when_try_to_change_password($decrypt_encnim, $decrypt_email, $decrypt_otp, 1);
 
                     if ($cek_otp_to_change == 2) {
                         $cek_old_password = $this->Api_model->cek_old_password($decrypt_encnim, $decrypt_newpass);
@@ -2735,7 +2771,7 @@ class Smartmhs extends REST_Controller_Smartmobile
                             $success = false;
                             $message = "Password pernah digunakan, gunakan password lain.";
                         } else {
-                            $update = $this->Api_model->update_password_and_useotp_mahasiswa($decrypt_encnim, $decrypt_newpass, $email, $otp_post);
+                            $update = $this->Api_model->update_password_and_useotp_mahasiswa($decrypt_encnim, $decrypt_newpass, $decrypt_email, $decrypt_otp);
                             if ($update) {
                                 $success = true;
                                 $message = "Update password berhasil, Silahkan menuju halaman login";
@@ -2748,7 +2784,7 @@ class Smartmhs extends REST_Controller_Smartmobile
                                 $mahasiswa = $data_mhs['NMMHSMSMHS'];
                                 $text_email = "Hai $mahasiswa, Kamu berhasil mengganti password akun SIAKAD melalui aplikasi SMART . Jika kamu tidak merasa melakukan aktifitas ini segera laporkan kebagian <b>UPT TIPD IAIN SALATIGA</b>, atau anda dapat mengambil alih akun anda dengan cara <b>reset password</b>. ";
                                 $subject = "IAIN Salatiga : Pemberitahuan reset password";
-                                $this->send_email($email, $text_email, $subject);
+                                $this->send_email($decrypt_email, $text_email, $subject);
                             } else {
                                 $success = false;
                                 $message = "Update password gagal, terjadi kendala database.";
@@ -2872,6 +2908,145 @@ class Smartmhs extends REST_Controller_Smartmobile
         ], REST_Controller_Smartmobile::HTTP_OK);
     }
 
+    public function get_lokasi_post()
+    {
+        $idlokasi = $this->input->post("idlokasi");
+        $idlevel = $this->input->post("idlevel");
+    
+
+        $this->form_validation->set_rules('idlokasi', "idlokasi", 'required');
+        $this->form_validation->set_rules('idlevel', "idlevel", 'required');
+        $this->form_validation->set_message('required', '%s tidak valid');
+        $this->form_validation->set_error_delimiters('', '');
+
+        if ($this->form_validation->run() == true) {
+            if ($idlokasi == "ID" && $idlevel == 1) {
+                $get_propinsi = $this->Api_model->get_propinsi_mhs($idlokasi);
+                if ($get_propinsi != null) {
+                    $success = true;
+                    $message = "List provinsi ditemukan";
+                    $data = $get_propinsi;
+                } else {
+                    $success = false;
+                    $message = "Tidak dapat menemukan list provinsi";
+                    $data = null;
+                }
+            } else if ($idlevel == 2) {
+                $get_kota = $this->Api_model->get_kota_mhs($idlokasi);
+                if ($get_kota != null) {
+                    $success = true;
+                    $message = "List kab / kota ditemukan";
+                    $data = $get_kota;
+                } else {
+                    $success = false;
+                    $message = "Tidak dapat menemukan list kab / kota";
+                    $data = null;
+                }
+            } else if ($idlevel == 3) {
+                $get_kecamatan = $this->Api_model->get_kecamatan_mhs($idlokasi);
+                if ($get_kecamatan != null) {
+                    $success = true;
+                    $message = "List kecamatan ditemukan";
+                    $data = $get_kecamatan;
+                } else {
+                    $success = false;
+                    $message = "Tidak dapat menemukan list kecamatan";
+                    $data = null;
+                }
+            }else{
+                $success = false;
+                $message = "Tidak dapat menemukan list lokasi manapun";
+                $data = null;
+            }
+        } else {
+            $idnegara_err = form_error('idlokasi') ? form_error('idlokasi') . ' ' : null;
+            $idlevel_err = form_error('idlevel') ? form_error('idlevel') : null;
+            $success = false;
+            $message = $idnegara_err . $idlevel_err;
+            $data = null;
+        }
+
+        $this->response([
+            'success' => $success,
+            'message' => $message,
+            'data' => $data
+
+        ], REST_Controller_Smartmobile::HTTP_OK);
+    }
+
+    // public function get_kota_post(){
+    //     $idprovinsi = $this->input->post("idprovinsi");
+
+    //     $this->form_validation->set_rules('idprovinsi', 'ID Provinsi', 'required');
+    //     $this->form_validation->set_message('required', '%s tidak valid');
+    //     $this->form_validation->set_error_delimiters('', '');
+
+    //     if ($this->form_validation->run() == true) {
+
+    //             $get_kota = $this->Api_model->get_kota_mhs($idprovinsi);
+    //             if($get_kota!=null){
+    //                 $success = true;
+    //                 $message = "List kab / kota ditemukan";
+    //                 $data = $get_kota;
+    //             }else{
+    //                 $success = false;
+    //                 $message = "Tidak dapat menemukan list kab / kota";
+    //                 $data = null;
+    //             }
+
+    //     }else{
+    //         $idprovinsi_err = form_error('idprovinsi') ? form_error('idprovinsi') : null;
+    //         $success = false;
+    //         $message = $idprovinsi_err;
+    //         $data = null;
+    //     }
+
+    //     $this->response([
+    //         'success' => $success,
+    //         'message' => $message,
+    //         'data' => $data
+
+    //     ], REST_Controller_Smartmobile::HTTP_OK);
+
+    // }
+
+    // public function get_kecamatan_post(){
+    //     $idkota= $this->input->post("idkota");
+
+    //     $this->form_validation->set_rules('idkota', 'ID Kota', 'required');
+    //     $this->form_validation->set_message('required', '%s tidak valid');
+    //     $this->form_validation->set_error_delimiters('', '');
+
+    //     if ($this->form_validation->run() == true) {
+
+    //             $get_kota = $this->Api_model->get_kecamatan_mhs($idkota);
+    //             if($get_kota!=null){
+    //                 $success = true;
+    //                 $message = "List kecamatan ditemukan";
+    //                 $data = $get_kota;
+    //             }else{
+    //                 $success = false;
+    //                 $message = "Tidak dapat menemukan list kecamatan";
+    //                 $data = null;
+    //             }
+
+    //     }else{
+    //         $idkota_err = form_error('idkota') ? form_error('idkota') : null;
+    //         $success = false;
+    //         $message = $idkota_err;
+    //         $data = null;
+    //     }
+
+    //     $this->response([
+    //         'success' => $success,
+    //         'message' => $message,
+    //         'data' => $data
+
+    //     ], REST_Controller_Smartmobile::HTTP_OK);
+
+    // }
+
+
 
 
 
@@ -2898,7 +3073,7 @@ class Smartmhs extends REST_Controller_Smartmobile
 
     public function email_check()
     {
-        $email = $this->input->post("uemail");
+        $email = BniEnc::decrypt_string($this->input->post("uemail"), $this->cid_app(), $this->cis_app());
         $cek = $this->Api_model->cek_exist_email($email);
         if (!$cek) {
             $this->form_validation->set_message('email_check', 'Email telah digunakan oleh user lain.');

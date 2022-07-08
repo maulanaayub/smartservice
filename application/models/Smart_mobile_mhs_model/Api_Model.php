@@ -1041,4 +1041,38 @@ class Api_model extends CI_Model
             return false;
         }
     }
+
+    public function get_propinsi_mhs()
+    {
+    
+        $this->siakad->select('id_wil as id, nm_wil as nama');
+        $this->siakad->from('feeder_data_wilayah');
+        $this->siakad->where('id_level_wil', 1);
+        $this->siakad->where('id_negara', "ID");
+        $this->siakad->order_by('id_wil', 'asc');
+        $query = $this->siakad->get();
+        return $query->result_array();
+    }
+
+    public function get_kota_mhs($idprovinsi){
+        $this->siakad->select('id_wil as id, nm_wil as nama');
+        $this->siakad->from('feeder_data_wilayah');
+        $this->siakad->where('id_level_wil', 2);
+        $this->siakad->where('id_negara', "ID");
+        $this->siakad->where('id_induk_wilayah', $idprovinsi);
+        $this->siakad->order_by('id_wil', 'asc');
+        $query = $this->siakad->get();
+        return $query->result_array();
+    }
+
+    public function get_kecamatan_mhs($idkota){
+        $this->siakad->select('id_wil as id, nm_wil as nama');
+        $this->siakad->from('feeder_data_wilayah');
+        $this->siakad->where('id_level_wil', 3);
+        $this->siakad->where('id_negara', "ID");
+        $this->siakad->where('id_induk_wilayah', $idkota);
+        $this->siakad->order_by('id_wil', 'asc');
+        $query = $this->siakad->get();
+        return $query->result_array();
+    }
 }
