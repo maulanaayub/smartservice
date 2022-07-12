@@ -771,8 +771,9 @@ class Api_model extends CI_Model
         }
     }
 
-    public function update_password_using_old_password($decrypt_encnim, $decrypt_newpass, $decrypt_email,$data_insert){
-         $this->siakad->trans_begin();
+    public function update_password_using_old_password($decrypt_encnim, $decrypt_newpass, $decrypt_email, $data_insert)
+    {
+        $this->siakad->trans_begin();
         $this->siakad->query('update msmhs set login_pass=PASSWORD("' . $decrypt_newpass . '") where NIMHSMSMHS="' . $decrypt_encnim . '" and EMAIL="' . $decrypt_email . '"');
         $this->siakad->insert('trresetpassword', $data_insert);
 
@@ -901,7 +902,7 @@ class Api_model extends CI_Model
         //cek mhasiswa perangkat pertamakali atau sdh ada perangkat sebelumnya
         $this->siakad->select('*');
         $this->siakad->from('trdevicemhs');
-        $this->siakad->where("NIMHS",$username);
+        $this->siakad->where("NIMHS", $username);
         $this->siakad->where('AKTIFASI', 0);
         $query3 = $this->siakad->get()->result_array();
 
@@ -935,23 +936,23 @@ class Api_model extends CI_Model
         $this->siakad->order_by('TGLLOGIN', 'DESC');
         $query2 = $this->siakad->get()->row_array();
 
-        if ($query1 != null || $query2!=null) {
+        if ($query1 != null || $query2 != null) {
             if ($query1['BATASBLOKIRDEVICEBARU'] > time()) {
-                $data = array('kode' => 2, 'message' => 'Akun kamu tidak dapat berganti perangkat sampai ' . date("d F Y", $query1['BATASBLOKIRDEVICEBARU']) . ' ' . date("H:i", $query1['BATASBLOKIRDEVICEBARU']).', Untuk menghubungkan akunmu dengan perangkat lain silahkan tunggu sampai batas blokir selesai');
-                
+                $data = array('kode' => 2, 'message' => 'Akun kamu tidak dapat berganti perangkat sampai ' . date("d F Y", $query1['BATASBLOKIRDEVICEBARU']) . ' ' . date("H:i", $query1['BATASBLOKIRDEVICEBARU']) . ', Untuk menghubungkan akunmu dengan perangkat lain silahkan tunggu sampai batas blokir selesai');
+
                 return $data;
             } else {
                 if ($query2 != null) {
                     if ($query2['BATASBLOKIRDEVICEBARU'] > time()) {
                         $hitungkaratker = strlen($query2['NIMHS']);
-                        $jumlahkarakterdibintang = floor((0.40)* $hitungkaratker);
+                        $jumlahkarakterdibintang = floor((0.40) * $hitungkaratker);
                         $jumlahkaraktertidakbintang = $hitungkaratker - $jumlahkarakterdibintang;
 
                         $stringtanpabintang = substr($query2['NIMHS'], 0, $jumlahkaraktertidakbintang);
-                        $stringbintang = str_repeat('*',$jumlahkarakterdibintang);
-                        
-                        $bintangreplace = $stringtanpabintang.$stringbintang;
-                        $data = array('kode' => 1, 'message' => 'Perangkat ini terkunci sampai ' . date("d F Y", $query2['BATASBLOKIRDEVICEBARU']) . ' ' . date("H:i", $query2['BATASBLOKIRDEVICEBARU']) . ', karena saat ini perangkat masih terhubung dengan akun ' . $bintangreplace. ', Untuk menghubungkan perangkat ini dengan akun lain silahkan tunggu sampai batas blokir selesai');
+                        $stringbintang = str_repeat('*', $jumlahkarakterdibintang);
+
+                        $bintangreplace = $stringtanpabintang . $stringbintang;
+                        $data = array('kode' => 1, 'message' => 'Perangkat ini terkunci sampai ' . date("d F Y", $query2['BATASBLOKIRDEVICEBARU']) . ' ' . date("H:i", $query2['BATASBLOKIRDEVICEBARU']) . ', karena saat ini perangkat masih terhubung dengan akun ' . $bintangreplace . ', Untuk menghubungkan perangkat ini dengan akun lain silahkan tunggu sampai batas blokir selesai');
                         return $data;
                     } else {
                         $data = array('kode' => 3, 'message' => 'Perangkat dapat ditautkan');
@@ -962,7 +963,7 @@ class Api_model extends CI_Model
                     return $data;
                 }
             }
-        }else{
+        } else {
             $data = array('kode' => 3, 'message' => 'Perangkat dapat ditautkan');
             return $data;
         }
@@ -1007,7 +1008,8 @@ class Api_model extends CI_Model
         }
     }
 
-    public function non_active_old_device($nim,$data_update){
+    public function non_active_old_device($nim, $data_update)
+    {
         $this->siakad->where("NIMHS", $nim);
         $this->siakad->update('trdevicemhs', $data_update);
 
@@ -1044,7 +1046,7 @@ class Api_model extends CI_Model
 
     public function get_propinsi_mhs()
     {
-    
+
         $this->siakad->select('id_wil as id, nm_wil as nama');
         $this->siakad->from('feeder_data_wilayah');
         $this->siakad->where('id_level_wil', 1);
@@ -1054,7 +1056,8 @@ class Api_model extends CI_Model
         return $query->result_array();
     }
 
-    public function get_kota_mhs($idprovinsi){
+    public function get_kota_mhs($idprovinsi)
+    {
         $this->siakad->select('id_wil as id, nm_wil as nama');
         $this->siakad->from('feeder_data_wilayah');
         $this->siakad->where('id_level_wil', 2);
@@ -1065,7 +1068,8 @@ class Api_model extends CI_Model
         return $query->result_array();
     }
 
-    public function get_kecamatan_mhs($idkota){
+    public function get_kecamatan_mhs($idkota)
+    {
         $this->siakad->select('id_wil as id, nm_wil as nama');
         $this->siakad->from('feeder_data_wilayah');
         $this->siakad->where('id_level_wil', 3);
@@ -1074,5 +1078,52 @@ class Api_model extends CI_Model
         $this->siakad->order_by('id_wil', 'asc');
         $query = $this->siakad->get();
         return $query->result_array();
+    }
+
+    public function get_nama_lokasi($idlokasi, $idlevel)
+    {
+        $this->siakad->select('nm_wil as nama');
+        $this->siakad->from('feeder_data_wilayah');
+        if ($idlevel != 0) {
+            $this->siakad->where('id_level_wil', $idlevel);
+            $this->siakad->where('id_negara', "ID");
+            $this->siakad->where('id_wil', $idlokasi);
+        } else {
+            $this->siakad->where('id_negara', $idlokasi);
+        }
+
+
+        $query = $this->siakad->get()->row_array();
+        return $query['nama'];
+    }
+
+    public function get_kode_lokasi($nama_lokasi, $idlevel, $parent)
+    {
+        $this->siakad->select('id_wil as kode');
+        $this->siakad->from('feeder_data_wilayah');
+
+        $this->siakad->where('id_level_wil', $idlevel);
+        $this->siakad->where('id_negara', "ID");
+        $this->siakad->where("nm_wil like '%$nama_lokasi%'");
+
+        if ($parent!=null){
+            $this->siakad->where('id_induk_wilayah', $parent);
+        }
+
+
+
+        $query = $this->siakad->get()->row_array();
+        return $query['kode'];
+    }
+
+    public function get_biodata_mahasiswa($nim, $kdpst)
+    {
+        $this->siakad->select('*');
+        $this->siakad->from('msmhs');
+
+        $this->siakad->where('NIMHSMSMHS', $nim);
+        $this->siakad->where('KDPSTMSMHS', $kdpst);
+        $query = $this->siakad->get();
+        return $query->row_array();
     }
 }

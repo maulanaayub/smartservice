@@ -2912,7 +2912,7 @@ class Smartmhs extends REST_Controller_Smartmobile
     {
         $idlokasi = $this->input->post("idlokasi");
         $idlevel = $this->input->post("idlevel");
-    
+
 
         $this->form_validation->set_rules('idlokasi', "idlokasi", 'required');
         $this->form_validation->set_rules('idlevel', "idlevel", 'required');
@@ -2953,7 +2953,7 @@ class Smartmhs extends REST_Controller_Smartmobile
                     $message = "Tidak dapat menemukan list kecamatan";
                     $data = null;
                 }
-            }else{
+            } else {
                 $success = false;
                 $message = "Tidak dapat menemukan list lokasi manapun";
                 $data = null;
@@ -2963,6 +2963,389 @@ class Smartmhs extends REST_Controller_Smartmobile
             $idlevel_err = form_error('idlevel') ? form_error('idlevel') : null;
             $success = false;
             $message = $idnegara_err . $idlevel_err;
+            $data = null;
+        }
+
+        $this->response([
+            'success' => $success,
+            'message' => $message,
+            'data' => $data
+
+        ], REST_Controller_Smartmobile::HTTP_OK);
+    }
+
+    public function biodata_mhs_get()
+    {
+        $nim = $this->input->get('unim');
+        $kdpst = $this->input->get('kodepst');
+
+        $querylink = array("unim" => $nim, "kodepst" => $kdpst);
+        $this->form_validation->set_data($querylink);
+
+        $this->form_validation->set_rules('unim', 'NIM', 'required');
+        $this->form_validation->set_rules('kodepst', 'Kode Program Studi', 'required');
+
+        $this->form_validation->set_message('required', '%s tidak valid');
+        $this->form_validation->set_error_delimiters('', '');
+
+        if ($this->form_validation->run() == TRUE) {
+            $data_mhs = $this->Api_model->get_biodata_mahasiswa($nim, $kdpst);
+
+            //var_dump($data_mhs);
+            if ($data_mhs != null) {
+                $data['mahasiswa_nama'] = ucwords(strtolower($data_mhs['NMMHSMSMHS']));
+                $data['mahasiswa_nim'] = $data_mhs['NIMHSMSMHS'];
+
+                if ($data_mhs['ISWNI'] == 'I') {
+                    $kewarganegaraan = 'ID';
+                } else {
+                    $kewarganegaraan = $data_mhs['ISWNI'];
+                }
+
+                $data['mahasiswa_kewarganegaraan_kode'] = $kewarganegaraan;
+                $data['mahasiswa_kewarganegaraan_nama'] = $this->Api_model->get_nama_lokasi($kewarganegaraan, 0);
+
+                $data['mahasiswa_nik'] = $data_mhs['NOKTP'];
+                $data['mahasiswa_tempat_lahir'] = $data_mhs['TPLHRMSMHS'];
+                $data['mahasiswa_tanggal_lahir'] = $data_mhs['TGLHRMSMHS'];
+                $data['mahasiswa_agama'] = $data_mhs['AGAMA'];
+
+                if ($data_mhs['KDJEKMSMHS'] == 'P') {
+                    $jk = 'Perempuan';
+                } else {
+                    $jk = 'Laki - Laki';
+                }
+                $data['mahasiswa_jenis_kelamin'] = $jk;
+
+                $data['mahasiswa_no_hp'] = $data_mhs['TELP'];
+                $data['mahasiswa_email'] = $data_mhs['EMAIL'];
+                $data['mahasiswa_tinggi_badan'] = $data_mhs['TINGGIBADAN'];
+                $data['mahasiswa_berat_badan'] = $data_mhs['BERATBADAN'];
+
+
+
+                $data_al_lngkp = $data_mhs['ALAMATLENGKAP'];
+                $pisah = explode("\r", $data_al_lngkp);
+                $jumlah_array_pisah = count($pisah);
+
+                //var_dump($data_mhs['ALAMATLENGKAP']);
+
+                if ($jumlah_array_pisah == 5) {
+                    //jalan & rt & rw & dsn
+                    $data['mahasiswa_jl'] = '';
+                    $data['mahasiswa_rw'] = '';
+                    $data['mahasiswa_rt'] = '';
+                    $data['mahasiswa_dusun'] = '';
+
+                    //desa & kecamatan
+                    $pisahkan_desa_kecamatan = explode("Kec.", $pisah[0]);
+                    $jumlah_array_pisahkan_desa_kecamatan = count($pisahkan_desa_kecamatan);
+                    $data['mahasiswa_desa'] = rtrim($pisahkan_desa_kecamatan[0]);
+                    if ($jumlah_array_pisahkan_desa_kecamatan >= 2) {
+                        $data['mahasiswa_kecamatan_kode'] = $pisahkan_desa_kecamatan[1];
+                        $data['mahasiswa_kecamatan_nama'] = $this->Api_model->get_nama_lokasi($pisahkan_desa_kecamatan[1], 3);
+                    } else {
+                        $data['mahasiswa_kecamatan_kode'] = '';
+                        $data['mahasiswa_kecamatan_nama'] = '';
+                    }
+                    //kabupaten atau kota
+                    $data['mahasiswa_kab_kode'] = $pisah[1];
+                    $data['mahasiswa_kab_nama'] = $this->Api_model->get_nama_lokasi($pisah[2], 2);
+                    //propinsi
+                    $data['mahasiswa_propinsi_kode'] = $pisah[2];
+                    $data['mahasiswa_propinsi_nama'] = $this->Api_model->get_nama_lokasi($pisah[3], 1);
+                    //kode pos
+                    $data['mahasiswa_kode_pos'] = $pisah[3];
+                    //negara
+                    $data['mahasiswa_negara_kode'] = $pisah[4];
+                    $data['mahasiswa_negara_nama'] = $this->Api_model->get_nama_lokasi($pisah[5], 0);
+                } else if ($jumlah_array_pisah == 6) {
+                    //jalan & rt & rw & dsn
+                    ##karena untuk mendapatkan jalan,rt,rw dan dsn tidak dapat dipecah dengan fungsi explode biasa disebabkan
+                    ##delimiter nya berbeda-beda maka teknik pemisahan datanya dimulai dari data paling belakang berturut turut yaitu
+                    ##proses 1 mencari data dsn jika array hasil explode berjumlah dua maka data dsn ditemukan pada array ke 1
+                    $pisahkan_dusun = explode("Dsn.", $pisah[0]);
+
+
+                    if (count($pisahkan_dusun) == 2) { //jika data dusun ada maka pasti hasil count array adalah 2
+                        $data['mahasiswa_dusun'] = $pisahkan_dusun[1];
+                    } else { //jika count data dusun 1 maka 
+                        $data['mahasiswa_dusun'] = '';
+                    }
+                    ##proses 2 mencari data rw berdasarkan data pemecahan dusun jika array hasil explode berjumlah dua maka data rw ditemukan pada array ke 1
+                    $pisahkan_rw = explode("Rw.", $pisahkan_dusun[0]);
+
+                    if (count($pisahkan_rw) == 2) { //jika data rw ada maka pasti hasil count array adalah 2
+                        $data['mahasiswa_rw'] = rtrim($pisahkan_rw[1]);
+                    } else { //jika count data rw 1 maka 
+                        $data['mahasiswa_rw'] = '';
+                    }
+                    ##proses 3 mencari data rt berdasarkan data pemecahan rw jika array hasil explode berjumlah dua maka data rt ditemukan pada array ke 1
+                    $pisahkan_rt = explode("Rt.", $pisahkan_rw[0]);
+
+                    if (count($pisahkan_rt) == 2) { //jika data rt ada maka pasti hasil count array adalah 2
+                        $data['mahasiswa_rt'] = rtrim($pisahkan_rt[1]);
+                    } else { //jika count data rt 1 maka 
+                        $data['mahasiswa_rt'] = '';
+                    }
+                    ##proses 4 mencari data jalan berdasarkan data pemecahan rt array dengan value array ke 0 
+                    $data['mahasiswa_jl'] = rtrim($pisahkan_rt[0]);
+
+                    //desa & kecamatan
+                    $pisahkan_desa_kecamatan = explode("Kec.", $pisah[1]);
+                    $jumlah_array_pisahkan_desa_kecamatan = count($pisahkan_desa_kecamatan);
+                    $data['mahasiswa_desa'] = rtrim($pisahkan_desa_kecamatan[0]);
+                    if ($jumlah_array_pisahkan_desa_kecamatan >= 2) {
+                        $data['mahasiswa_kecamatan_kode'] = $pisahkan_desa_kecamatan[1];
+                        $data['mahasiswa_kecamatan_nama'] = $this->Api_model->get_nama_lokasi($pisahkan_desa_kecamatan[1], 3);
+                    } else {
+                        $data['mahasiswa_kecamatan_kode'] = '';
+                        $data['mahasiswa_kecamatan_nama'] = '';
+                    }
+                    //kabupaten atau kota
+                    $data['mahasiswa_kab_kode'] = $pisah[2];
+                    $data['mahasiswa_kab_nama'] = $this->Api_model->get_nama_lokasi($pisah[2], 2);
+                    //propinsi
+                    $data['mahasiswa_propinsi_kode'] = $pisah[3];
+                    $data['mahasiswa_propinsi_nama'] = $this->Api_model->get_nama_lokasi($pisah[3], 1);
+                    //kode pos
+                    $data['mahasiswa_kode_pos'] = $pisah[4];
+                    //negara
+                    $data['mahasiswa_negara_kode'] = $pisah[5];
+                    $data['mahasiswa_negara_nama'] = $this->Api_model->get_nama_lokasi($pisah[5], 0);
+                } else {
+                    $data['mahasiswa_jl'] = '';
+                    $data['mahasiswa_rt'] = '';
+                    $data['mahasiswa_rw'] = '';
+                    $data['mahasiswa_dusun'] = '';
+                    $data['mahasiswa_desa'] = '';
+                    $data['mahasiswa_kecamatan_kode'] = '';
+                    $data['mahasiswa_kecamatan_nama'] = '';
+                    $data['mahasiswa_kab_kode'] = '';
+                    $data['mahasiswa_kab_nama'] = '';
+                    $data['mahasiswa_propinsi_kode'] = '';
+                    $data['mahasiswa_propinsi_nama'] = '';
+                    $data['mahasiswa_kode_pos'] = '';
+                    $data['mahasiswa_negara_kode'] = '';
+                    $data['mahasiswa_negara_nama'] = '';
+                }
+
+                $success = true;
+                $message = "Biodata mahasiswa ditemukan.";
+
+                //$data = BniEnc::encrypt($data, $this->cid_app(), $this->cis_app());
+            } else {
+                $success = false;
+                $message = "Nim mahasiswa tidak ditemukan.";
+                $data = null;
+            }
+        } else {
+            $nim_err = form_error('unim') ? form_error('unim') . ' ' : null;
+            $kdpst_err = form_error('kodepst') ? form_error('kodepst') : null;
+
+            $success = false;
+            $message = $nim_err . $kdpst_err;
+            $data = null;
+        }
+
+        $this->response([
+            'success' => $success,
+            'message' => $message,
+            'data' => $data
+
+        ], REST_Controller_Smartmobile::HTTP_OK);
+    }
+
+    public function biodata_ortu_mhs_get()
+    {
+        $nim = $this->input->get('unim');
+        $kdpst = $this->input->get('kodepst');
+
+        $querylink = array("unim" => $nim, "kodepst" => $kdpst);
+        $this->form_validation->set_data($querylink);
+
+        $this->form_validation->set_rules('unim', 'NIM', 'required');
+        $this->form_validation->set_rules('kodepst', 'Kode Program Studi', 'required');
+
+        $this->form_validation->set_message('required', '%s tidak valid');
+        $this->form_validation->set_error_delimiters('', '');
+
+        if ($this->form_validation->run() == TRUE) {
+            $data_mhs = $this->Api_model->get_biodata_mahasiswa($nim, $kdpst);
+
+            //var_dump($data_mhs);
+            if ($data_mhs != null) {
+
+
+                //memecah nama ortu
+                $data_ortu_lngkp = $data_mhs['NAMAORTUWALI'];
+                $pisah_ortu = explode("|", $data_ortu_lngkp);
+                $jumlah_array_pisah_ortu = count($pisah_ortu);
+
+                if ($jumlah_array_pisah_ortu == 2) {
+                    $data['mahasiswa_ayah'] = $pisah_ortu[0];
+                    $data['mahasiswa_ibu'] = $pisah_ortu[1];
+                } else if ($jumlah_array_pisah_ortu == 1) {
+                    $data['mahasiswa_ayah'] = $pisah_ortu[0];
+                    $data['mahasiswa_ibu'] = "";
+                } else {
+                    $data['mahasiswa_ayah'] = "";
+                    $data['mahasiswa_ibu'] = "";
+                }
+
+                //memecah pekerjaan ortu
+                $data_pk_ortu_lngkp = $data_mhs['PEKERJAANORTUWALI'];
+                $pisah_pk_ortu = explode("|", $data_pk_ortu_lngkp);
+                $jumlah_array_pisah_pk_ortu = count($pisah_pk_ortu);
+
+                if ($jumlah_array_pisah_pk_ortu == 2) {
+                    $data['mahasiswa_pekerjaan_ayah_nama'] = $pisah_pk_ortu[0];
+                    $data['mahasiswa_pekerjaan_ibu_nama'] = $pisah_pk_ortu[1];
+                } else if ($jumlah_array_pisah_pk_ortu == 1) {
+                    $data['mahasiswa_pekerjaan_ayah_nama'] = $pisah_pk_ortu[0];
+                    $data['mahasiswa_pekerjaan_ibu_nama'] = "";
+                } else {
+                    $data['mahasiswa_pekerjaan_ayah_nama'] = "";
+                    $data['mahasiswa_pekerjaan_ibu_nama'] = "";
+                }
+                $data['mahasiswa_pekerjaan_ortu_reference'] = 302;
+
+                //memecah pendidikan ortu
+                $data_pd_ortu_lngkp = $data_mhs['PENDIDIKANORTUWALI'];
+                $pisah_pd_ortu = explode("|", $data_pd_ortu_lngkp);
+                $jumlah_array_pisah_pd_ortu = count($pisah_pd_ortu);
+
+                if ($jumlah_array_pisah_pd_ortu == 2) {
+                    $data['mahasiswa_pendidikan_ayah'] = $pisah_pd_ortu[0];
+                    $data['mahasiswa_pendidikan_ibu'] = $pisah_pd_ortu[1];
+                } else if ($jumlah_array_pisah_pd_ortu == 1) {
+                    $data['mahasiswa_pendidikan_ayah'] = $pisah_pd_ortu[0];
+                    $data['mahasiswa_pendidikan_ibu'] = "";
+                } else {
+                    $data['mahasiswa_pendidikan_ayah'] = "";
+                    $data['mahasiswa_pendidikan_ibu'] = "";
+                }
+                $data['mahasiswa_pendidikan_ortu_reference'] = 303;
+                //memecah penghasilan ortu
+                $data_ph_ortu_lngkp = $data_mhs['PENGHASILANORTUWALI'];
+                $pisah_ph_ortu = explode("|", $data_ph_ortu_lngkp);
+                $jumlah_array_pisah_ph_ortu = count($pisah_ph_ortu);
+
+                if ($jumlah_array_pisah_ph_ortu == 2) {
+                    $data['mahasiswa_penghasilan_ayah'] = $pisah_ph_ortu[0];
+                    $data['mahasiswa_penghasilan_ibu'] = $pisah_ph_ortu[1];
+                } else if ($jumlah_array_pisah_ph_ortu == 1) {
+                    $data['mahasiswa_penghasilan_ayah'] = $pisah_ph_ortu[0];
+                    $data['mahasiswa_penghasilan_ibu'] = "";
+                } else {
+                    $data['mahasiswa_penghasilan_ayah'] = "";
+                    $data['mahasiswa_penghasilan_ibu'] = "";
+                }
+                $data['mahasiswa_penghasilan_ortu_reference'] = 301;
+
+                //============memecah data alamat ortu wali========================
+
+                $data_al_lngkp_ortu = $data_mhs['ALAMATORTUWALI'];
+                $pisah_ortu = explode("\r\n", $data_al_lngkp_ortu);
+                $jumlah_array_pisah_ortu = count($pisah_ortu);
+
+
+
+                //var_dump($pisah_ortu);
+
+                if ($jumlah_array_pisah_ortu == 5) {
+                    $get_kode_kabupaten = $this->Api_model->get_kode_lokasi($pisah_ortu[1], 2,$pisah_ortu[2]);
+                    //echo '1';
+                    //jalan & rt & rw & dsn
+                    $data['mahasiswa_ortu_jl_rt_rw_dusun'] = '';
+                    //desa & kecamatan
+                    $pisah_desa_kecamatan = explode(",", $pisah_ortu[0]);
+                    if(count($pisah_desa_kecamatan)==2){
+                        $data['mahasiswa_ortu_desa'] = $pisah_desa_kecamatan[0];
+
+                        $get_kode_kecamatan = $this->Api_model->get_kode_lokasi(trim($pisah_desa_kecamatan[1]), 3,$get_kode_kabupaten);
+                        $data['mahasiswa_ortu_kecamatan_kode'] = "$get_kode_kecamatan";
+                        $data['mahasiswa_ortu_kecamatan_nama'] = trim($pisah_desa_kecamatan[1]);
+                    }else{
+                        $data['mahasiswa_ortu_desa'] = $pisah_ortu[0];
+                        $data['mahasiswa_ortu_kecamatan_kode'] = "";
+                        $data['mahasiswa_ortu_kecamatan_nama'] = "";
+                    }
+            
+                    //kabupaten atau kota
+                    
+                    $data['mahasiswa_ortu_kab_kode'] = "$get_kode_kabupaten";
+                    $data['mahasiswa_ortu_kab_nama'] =  $this->Api_model->get_nama_lokasi($get_kode_kabupaten, 2);
+                    //propinsi
+                    $data['mahasiswa_ortu_propinsi_kode'] = $pisah_ortu[2];
+                    $data['mahasiswa_ortu_propinsi_nama'] = $this->Api_model->get_nama_lokasi($pisah_ortu[2], 1);
+                    //kode pos
+                    $data['mahasiswa_ortu_kode_pos'] = $pisah_ortu[3];
+                    //negara
+                    $data['mahasiswa_ortu_negara_kode'] = $pisah_ortu[4];
+                    $data['mahasiswa_ortu_negara_nama'] = $this->Api_model->get_nama_lokasi($pisah_ortu[4], 0);
+                } else if ($jumlah_array_pisah_ortu == 6) {
+                    $get_kode_kabupaten = $this->Api_model->get_kode_lokasi($pisah_ortu[2], 2,$pisah_ortu[3]);
+                    //echo '2';
+                    //jalan & rt & rw & dsn
+                    $data['mahasiswa_ortu_jl_rt_rw_dusun'] = $pisah_ortu[0];
+                    //desa & kecamatan
+                    $pisah_desa_kecamatan = explode(",", $pisah_ortu[1]);
+                    if(count($pisah_desa_kecamatan)==2){
+                        $data['mahasiswa_ortu_desa'] = $pisah_desa_kecamatan[0];
+
+                        $get_kode_kecamatan = $this->Api_model->get_kode_lokasi(trim($pisah_desa_kecamatan[1]), 3,$get_kode_kabupaten);
+                        $data['mahasiswa_ortu_kecamatan_kode'] = $get_kode_kecamatan;
+                        $data['mahasiswa_ortu_kecamatan_nama'] = trim($pisah_desa_kecamatan[1]);
+                    }else{
+                        $data['mahasiswa_ortu_desa'] = $pisah_ortu[1];
+                        $data['mahasiswa_ortu_kecamatan_kode'] = "";
+                        $data['mahasiswa_ortu_kecamatan_nama'] = "";
+                    }
+
+
+                    //kabupaten atau kota
+                   
+                    $data['mahasiswa_ortu_kab_kode'] = "$get_kode_kabupaten";
+                    $data['mahasiswa_ortu_kab_nama'] =  $this->Api_model->get_nama_lokasi($get_kode_kabupaten, 2);
+                    //propinsi
+                    $data['mahasiswa_ortu_propins_kode'] = $pisah_ortu[3];
+                    $data['mahasiswa_ortu_propinsi_nama'] = $this->Api_model->get_nama_lokasi($pisah_ortu[3], 1);
+                    //kode pos
+                    $data['mahasiswa_ortu_kode_pos'] = $pisah_ortu[4];
+                    //negara
+                    $data['mahasiswa_ortu_negara_kode'] = $pisah_ortu[5];
+                    $data['mahasiswa_ortu_negara_nama'] = $this->Api_model->get_nama_lokasi($pisah_ortu[5], 0);
+                } else {
+                    //echo '3';
+                    $data['mahasiswa_ortu_jl_rt_rw_dusun'] = '';
+                    $data['mahasiswa_ortu_desa'] = '';
+                    $data['mahasiswa_kecamatan_kode'] ='';
+                    $data['mahasiswa_kecamatan_nama'] ='';
+                    $data['mahasiswa_ortu_kab_kode'] = '';
+                    $data['mahasiswa_ortu_kab_nama'] = '';
+                    $data['mahasiswa_ortu_propinsi_kode'] = '';
+                    $data['mahasiswa_ortu_propinsi_nama'] = '';
+                    $data['mahasiswa_ortu_kode_pos'] = '';
+                    $data['mahasiswa_ortu_negara_kode'] = '';
+                    $data['mahasiswa_ortu_negara_nama'] = '';
+                }
+
+                $success = true;
+                $message = "Biodata orang tua mahasiswa ditemukan.";
+
+                //$data = BniEnc::encrypt($data, $this->cid_app(), $this->cis_app());
+            } else {
+                $success = false;
+                $message = "Nim mahasiswa tidak ditemukan, Biodata orang tua tidak ditemukan.";
+                $data = null;
+            }
+        } else {
+            $nim_err = form_error('unim') ? form_error('unim') . ' ' : null;
+            $kdpst_err = form_error('kodepst') ? form_error('kodepst') : null;
+
+            $success = false;
+            $message = $nim_err . $kdpst_err;
             $data = null;
         }
 
@@ -3210,16 +3593,19 @@ class Smartmhs extends REST_Controller_Smartmobile
 
 
 
-    private function decrypt_post()
+    public function decrypt_post()
     {
 
         $string = $this->post('enc');
-        $a = BniEnc::decrypt_string($string, $this->cid_app(), $this->cis_app());
+        $a = BniEnc::decrypt($string, $this->cid_app(), $this->cis_app());
 
-        // $b =BniEnc::encrypt_string("123ayubayub", $this->cid_app(), $this->cis_app());
+        // $this->response([
+        //     'success' => true,
+        //     'data' => $a
+        // ], REST_Controller_Smartmobile::HTTP_OK);
 
-
-        var_dump($a);
+        header('Content-Type: application/json; charset=utf-8');
+        echo json_encode($a);
     }
 
     public function time_to_date_get($mytimestamp)
