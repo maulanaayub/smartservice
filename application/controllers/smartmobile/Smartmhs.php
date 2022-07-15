@@ -3021,6 +3021,7 @@ class Smartmhs extends REST_Controller_Smartmobile
                 $data['mahasiswa_email'] = $data_mhs['EMAIL'];
                 $data['mahasiswa_tinggi_badan'] = $data_mhs['TINGGIBADAN'];
                 $data['mahasiswa_berat_badan'] = $data_mhs['BERATBADAN'];
+                $data['mahasiswa_golongan_darah'] = $data_mhs['GOLDARAH'];
 
 
 
