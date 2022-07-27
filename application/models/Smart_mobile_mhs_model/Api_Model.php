@@ -1047,7 +1047,7 @@ class Api_model extends CI_Model
     public function get_propinsi_mhs()
     {
 
-        $this->siakad->select('id_wil as id, nm_wil as nama');
+        $this->siakad->select('trim(id_wil) as id, nm_wil as nama');
         $this->siakad->from('feeder_data_wilayah');
         $this->siakad->where('id_level_wil', 1);
         $this->siakad->where('id_negara', "ID");
@@ -1058,7 +1058,7 @@ class Api_model extends CI_Model
 
     public function get_kota_mhs($idprovinsi)
     {
-        $this->siakad->select('id_wil as id, nm_wil as nama');
+        $this->siakad->select('trim(id_wil) as id, nm_wil as nama');
         $this->siakad->from('feeder_data_wilayah');
         $this->siakad->where('id_level_wil', 2);
         $this->siakad->where('id_negara', "ID");
@@ -1070,7 +1070,7 @@ class Api_model extends CI_Model
 
     public function get_kecamatan_mhs($idkota)
     {
-        $this->siakad->select('id_wil as id, nm_wil as nama');
+        $this->siakad->select('trim(id_wil) as id, nm_wil as nama');
         $this->siakad->from('feeder_data_wilayah');
         $this->siakad->where('id_level_wil', 3);
         $this->siakad->where('id_negara', "ID");
@@ -1125,5 +1125,34 @@ class Api_model extends CI_Model
         $this->siakad->where('KDPSTMSMHS', $kdpst);
         $query = $this->siakad->get();
         return $query->row_array();
+    }
+
+    public function get_ph_pk_pd_ortu_mhs()
+    {
+     
+        $this->siakad->select('KDAPLTBKOD AS idreference,KDKODTBKOD as iditem,NMKODTBKOD as namaitem ');
+        $this->siakad->from('tbkod');
+        $this->siakad->where('KDAPLTBKOD IN (301,302,303)');
+        $this->siakad->order_by('KDAPLTBKOD', 'asc');
+        $query = $this->siakad->get();
+        return $query->result_array();
+    }
+
+    public function update_data_mahasiswa($nim,$kdpst, $param)
+    {
+        
+        //where harus diatas karena kalau dibawah perintah update dieksekusi tanpa where
+        $this->siakad->where('NIMHSMSMHS', $nim);
+        $this->siakad->where('KDPSTMSMHS', $kdpst);
+        $this->siakad->update('msmhs', $param);
+       
+
+        // if ($this->siakad->affected_rows() >= 0) {
+        //     return true; // your code
+        // } else {
+        //     return false; // your code
+        // }
+
+        return $this->siakad->affected_rows();
     }
 }

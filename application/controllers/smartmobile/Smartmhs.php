@@ -3168,6 +3168,24 @@ class Smartmhs extends REST_Controller_Smartmobile
                 $success = true;
                 $message = "Biodata mahasiswa ditemukan.";
 
+                // $data['kewarganegaraan_kode'] = "";
+                // $data['kewarganegaraan_nama'] = "";
+                // $data['golongan_darah'] ='';
+                // $data['jl'] = '';
+                // $data['rt'] = '';
+                // $data['rw'] = '';
+                // $data['dusun'] = '';
+                // $data['desa'] = '';
+                // $data['kecamatan_kode'] = '';
+                // $data['kecamatan_nama'] = '';
+                // $data['kab_kode'] = '';
+                // $data['kab_nama'] = '';
+                // $data['propinsi_kode'] = '';
+                // $data['propinsi_nama'] = '';
+                // $data['kode_pos'] = '';
+                // $data['negara_kode'] = '';
+                // $data['negara_nama'] = '';
+
                 $data = BniEnc::encrypt($data, $this->cid_app(), $this->cis_app());
             } else {
                 $success = false;
@@ -3343,7 +3361,7 @@ class Smartmhs extends REST_Controller_Smartmobile
                     $data['desa'] = $pisah_desa_kecamatan[0];
                     //kode pos
                     $data['kode_pos'] = $pisah_ortu[4];
-                    if($pisah_ortu[5]=="ID"){
+                    if ($pisah_ortu[5] == "ID") {
 
                         if (count($pisah_desa_kecamatan) == 2) {
                             $get_kode_kecamatan = $this->Api_model->get_kode_lokasi(trim($pisah_desa_kecamatan[1]), 3, $get_kode_kabupaten);
@@ -3353,14 +3371,14 @@ class Smartmhs extends REST_Controller_Smartmobile
                             $data['kecamatan_kode'] = "";
                             $data['kecamatan_nama'] = "";
                         }
-    
+
                         //kabupaten atau kota
                         $data['kab_kode'] = "$get_kode_kabupaten";
                         $data['kab_nama'] =  $this->Api_model->get_nama_lokasi($get_kode_kabupaten, 2);
                         //propinsi
-                        $data['propins_kode'] = $pisah_ortu[3];
+                        $data['propinsi_kode'] = $pisah_ortu[3];
                         $data['propinsi_nama'] = $this->Api_model->get_nama_lokasi($pisah_ortu[3], 1);
-                    }else{
+                    } else {
                         if (count($pisah_desa_kecamatan) == 2) {
                             $data['kecamatan_kode'] = "";
                             $data['kecamatan_nama'] = trim($pisah_desa_kecamatan[1]);
@@ -3383,6 +3401,7 @@ class Smartmhs extends REST_Controller_Smartmobile
                     //echo '3';
                     $data['jl_rt_rw_dusun'] = '';
                     $data['desa'] = '';
+            
                     $data['kecamatan_kode'] = '';
                     $data['kecamatan_nama'] = '';
                     $data['kab_kode'] = '';
@@ -3393,9 +3412,29 @@ class Smartmhs extends REST_Controller_Smartmobile
                     $data['negara_kode'] = '';
                     $data['negara_nama'] = '';
                 }
-
+                $data['no_hp_ortu'] = $data_mhs['TELPORTUWALI'];
                 $success = true;
                 $message = "Biodata orang tua mahasiswa ditemukan.";
+
+                // $data['ayah'] = "";
+                // $data['ibu'] = "";
+                // $data['pekerjaan_ayah_nama'] = "";
+                // $data['pekerjaan_ibu_nama'] = "";
+                // $data['pendidikan_ayah'] = "";
+                // $data['pendidikan_ibu'] = "";
+                // $data['penghasilan_ayah'] = "";
+                // $data['penghasilan_ibu'] = "";
+                // $data['jl_rt_rw_dusun'] = '';
+                // $data['desa'] = '';
+                // $data['kecamatan_kode'] = '';
+                // $data['kecamatan_nama'] = '';
+                // $data['kab_kode'] = '';
+                // $data['kab_nama'] = '';
+                // $data['propinsi_kode'] = '';
+                // $data['propinsi_nama'] = '';
+                // $data['kode_pos'] = '';
+                // $data['negara_kode'] = '';
+                // $data['negara_nama'] = '';
 
                 $data = BniEnc::encrypt($data, $this->cid_app(), $this->cis_app());
             } else {
@@ -3411,6 +3450,262 @@ class Smartmhs extends REST_Controller_Smartmobile
             $message = $nim_err . $kdpst_err;
             $data = null;
         }
+
+        $this->response([
+            'success' => $success,
+            'message' => $message,
+            'data' => $data
+
+        ], REST_Controller_Smartmobile::HTTP_OK);
+    }
+
+    public function simpan_biodatamhsortu_post(){
+        $nim = $this->input->post('unim');
+        $kdpst = $this->input->post('kodepst');
+        $encrypt_data = $this->input->post('data');
+
+        $this->form_validation->set_rules('unim', 'NIM', 'required');
+        $this->form_validation->set_rules('kodepst','Kode Program Studi','required');
+        $this->form_validation->set_rules('data','Data Update','required');
+
+        $this->form_validation->set_message('required', '%s tidak valid');
+        $this->form_validation->set_error_delimiters('', '');
+
+
+
+        if ($this->form_validation->run() == TRUE) {
+            $data =  BniEnc::decrypt_string($encrypt_data, $this->cid_app(), $this->cis_app());
+            if($data!=null){
+                $data_mhs = $this->Api_model->cek_nim_siakad($nim);
+                if($data_mhs!=null){
+                    $decode = json_decode($data,true);
+                    $data_update = array();
+                    
+                    //set data mhs
+
+                    if(isset($decode['kewarganegaraan_kode'])){
+                        $data_update += ["ISWNI"=>$decode['kewarganegaraan_kode']];
+                    }
+
+                    if(isset($decode['nik'])){
+                        $data_update += ["NOKTP"=>$decode['nik']];
+                    }
+
+                    if(isset($decode['tempat_lahir'])){
+                        $data_update += ["TPLHRMSMHS"=>$decode['tempat_lahir']];
+                    }
+
+                    if(isset($decode['tanggal_lahir'])){
+                        $data_update += ["TGLHRMSMHS"=>$decode['tanggal_lahir']];
+                    }
+
+                    if(isset($decode['no_hp'])){
+                        $data_update += ["TELP"=>$decode['no_hp']];
+                    }
+
+                    if(isset($decode['tinggi_badan'])){
+                        $data_update += ["TINGGIBADAN"=>$decode['tinggi_badan']];
+                    }
+                    if(isset($decode['berat_badan'])){
+                        $data_update += ["BERATBADAN"=>$decode['berat_badan']];
+                    }
+                    if(isset($decode['golongan_darah'])){
+                        $data_update += ["GOLDARAH"=>$decode['golongan_darah']];
+                    }
+
+                    $jl = "";
+                    if(isset($decode['jl'])){
+                        $jl = $decode['jl']. " ";
+                    }
+
+                    $rt = "";
+                    if(isset($decode['rt'])){
+                        $rt = "Rt.".$decode['rt']. " ";
+                    }
+
+                    $rw = "";
+                    if(isset($decode['rw'])){
+                        $rw = "Rw.".$decode['rw']. " ";
+
+                    }
+
+                    $dusun = "\r\n";
+                    if(isset($decode['dusun'])){
+                        $dusun = "Dsn.".$decode['dusun']. "\r\n";
+                    }
+
+                    $desa ="";
+                    if(isset($decode['desa'])){
+                        $desa = $decode['desa']. " ";
+                    }
+
+                    $kecamatan = "\r\n";
+                    if(isset($decode['kecamatan_kode'])){
+                        $kecamatan= 'Kec.'.$decode['kecamatan_kode']."\r\n";
+                    }
+
+                    $kota = "\r\n";
+                    if(isset($decode['kab_kode'])){
+                        $kota = $decode['kab_kode']."\r\n";
+                    }
+
+                    $propinsi = "\r\n";
+                    if(isset($decode['propinsi_kode'])){
+                        $propinsi = $decode['propinsi_kode']."\r\n";
+                    }
+
+                    $kodepos = "\r\n";
+                    if(isset($decode['kode_pos'])){
+                        $kodepos = $decode['kode_pos']."\r\n";
+                    }
+
+                    $negara = "\r\n";
+                    if(isset($decode['negara_kode'])){
+                        $negara = $decode['negara_kode'];
+                    }
+
+                    $alamat = $jl.$rt.$rw.$dusun.$desa.$kecamatan.$kota.$propinsi.$kodepos.$negara;
+                    if(isset($decode['negara_kode'])){
+                        $data_update += ["ALAMATLENGKAP"=>$alamat];
+                    }
+
+                    //set data ortu
+                    $ayah ="";
+                    $ibu ="";
+                    if(isset($decode['ayah'])||isset($decode['ibu'])){
+                        $ayah =$decode['ayah'];
+                        $ibu =$decode['ibu'];
+
+                        $data_update += ["NAMAORTUWALI"=> $ayah.'|'.$ibu ];
+                    }
+                    
+                    
+                    $pk_ayah ="";
+                    $pk_ibu ="";
+                    if(isset($decode['pekerjaan_ayah']) || isset($decode['pekerjaan_ibu'])){
+                        $pk_ayah =$decode['pekerjaan_ayah'];
+                        $pk_ibu =$decode['pekerjaan_ibu'];
+
+                        $data_update += ["PEKERJAANORTUWALI"=> $pk_ayah.'|'.$pk_ibu ];
+                    }
+                  
+                  
+                    $pd_ayah ="";
+                    $pd_ibu ="";
+                    if(isset($decode['pendidikan_ayah'])||isset($decode['pendidikan_ibu'])){
+                        $pd_ayah =$decode['pendidikan_ayah'];
+                        $pd_ibu =$decode['pendidikan_ibu'];
+
+                        $data_update += ["PENDIDIKANORTUWALI"=> $pd_ayah.'|'.$pd_ibu ];
+                    }
+                   
+                    
+
+                    $ph_ayah ="";
+                    $ph_ibu ="";
+                    if(isset($decode['penghasilan_ayah'])||isset($decode['penghasilan_ibu'])){
+                        $ph_ayah =$decode['penghasilan_ayah'];
+                        $ph_ibu =$decode['penghasilan_ibu'];
+
+                        $data_update += ["PENGHASILANORTUWALI"=> $ph_ayah.'|'.$ph_ibu ];
+                    }    
+
+                    if(isset($decode['no_hp_ortu'])){
+                        $data_update += ["TELPORTUWALI"=>$decode["no_hp_ortu"]];
+                    }
+
+                    $dusun_jl_rt_rw ="\r\n";
+                    if(isset($decode['dusun_jl_rt_rw'])){
+                        $dusun_jl_rt_rw = $decode['dusun_jl_rt_rw']."\r\n";
+                    }
+
+                    $desa_ortu ="";
+                    if(isset($decode['desa_ortu'])){
+                        $desa_ortu = $decode['desa_ortu'];
+                    }
+
+                    $kecamatan_ortu = "";
+                    if(isset($decode['kecamatan_nama_ortu'])){
+                        $kecamatan_ortu = $decode['kecamatan_nama_ortu'];
+                    }
+
+                    $desakecamatan = $desa_ortu.','.$kecamatan_ortu."\r\n";
+
+                    $kota_ortu ="\r\n";
+                    if(isset($decode['kab_nama_ortu'])){
+                        $kota_ortu = $decode['kab_nama_ortu']."\r\n";
+                    }
+
+                    $propinsi_ortu = "\r\n";
+                    if(isset($decode['propinsi_kode_ortu'])){
+                        $propinsi_ortu = $decode['propinsi_kode_ortu']."\r\n";
+                    }
+
+                    $kodepos_ortu = "\r\n";
+                    if(isset($decode['kode_pos_ortu'])){
+                        $kodepos_ortu = $decode['kode_pos_ortu']."\r\n";
+                    }
+
+                    $negara_ortu = "\r\n";
+                    if(isset($decode['negara_kode_ortu'])){
+                        $negara_ortu = $decode['negara_kode_ortu'];
+                    }
+
+                    $alamat_ortu = $dusun_jl_rt_rw.$desakecamatan.$kota_ortu.$propinsi_ortu.$kodepos_ortu.$negara_ortu;
+                    if(isset($decode['negara_kode_ortu'])){
+                        $data_update += ["ALAMATORTUWALI"=>$alamat_ortu];
+                    }
+
+                    $update = $this->Api_Model->update_data_mahasiswa($nim,$kdpst, $data_update);
+                    
+                    if($update>=0){
+                        $success = true;
+                        $message = "Update data berhasil , $update baris data terpengaruh";
+                    }else{
+                        $success = true;
+                        $message = "Update data gagal";
+                    }
+                   
+                }else{
+                    $success = false;
+                    $message = "Nim mahasiswa tidak ditemukan.";
+                }
+            }else{
+                $success = false;
+                $message = 'Mahasiswa yang baik adalah orang yang berkelakuan baik dan menjaga semua fasilitas kampus tanpa merusaknya.';
+            }
+        }else{
+            $nim_err = form_error('unim') ? form_error('unim') .' ': null;
+            $kdpst_err = form_error('kodepst') ? form_error('kodepst') .' ' : null;
+            $data_err = form_error('data') ? form_error('data') .' ' : null;
+
+            $success = false;
+            $message = trim($nim_err.$kdpst_err.$data_err);
+        }
+        sleep (1);
+        $this->response([
+            'success' => $success,
+            'message' => $message
+        ],REST_Controller_Smartmobile::HTTP_OK);
+
+    }
+
+    public function get_pk_pd_ph_ortu_post()
+    {
+
+
+        $get_item = $this->Api_model->get_ph_pk_pd_ortu_mhs();
+        if ($get_item != null) {
+            $success = true;
+            $message = "List ditemukan";
+            $data = $get_item;
+        } else {
+            $success = false;
+            $message = "Tidak dapat menemukan list";
+            $data = null;
+        }
+
+
 
         $this->response([
             'success' => $success,
